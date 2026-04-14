@@ -160,12 +160,10 @@ curl -X POST http://localhost:8000/analyze \
 }
 ```
 
-`"source"` will be `"fresh"` on first call and `"cache"` on repeat calls within the TTL window.
 
 #### Cache behavior
-First request → "source": "fresh"
-Repeated request (within TTL) → "source": "cache"
 
+`"source"` will be `"fresh"` on first call and `"cache"` on repeat calls within the TTL window.
 Cache stored in: `"data/cache.json'`
 
 
