@@ -38,7 +38,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-GOOGLE_API_KEY=your_google_ai_studio_key_here
+GOOGLE_API_KEY=google_ai_studio_key_here
 CACHE_TTL=86400
 ```
 
@@ -60,7 +60,6 @@ CACHE_TTL=86400
 └── README.md
 ```
 
----
 
 ## Running the application
 
@@ -72,7 +71,6 @@ The API will be available at `http://127.0.0.1:8000`.
 
 Interactive API docs (Swagger UI): `http://127.0.0.1:8000/docs`
 
----
 
 ## API Usage
 
@@ -108,61 +106,64 @@ curl -X POST http://localhost:8000/analyze \
 
 ```json
 {
-  "source": "fresh",
+  "source": "fresh | cache",
   "url": "https://example.com",
-  "pages_crawled": ["https://example.com", "https://example.com/about"],
+  "pages_crawled": [
+    "https://example.com",
+    "https://example.com/about"
+  ],
   "page_count": 2,
   "skipped_pages": [
-    {"url": "https://example.com/login", "reason": "matched skip pattern"},
-    {"url": "https://example.com/broken", "reason": "HTTP 404"}
+    {
+      "url": "https://example.com/login",
+      "reason": "blocked / timeout / 404 / skip rule"
+    }
   ],
   "analysis": {
     "status": "success",
-    "total_pages": 2,
+    "schema_version": "1.0",
+
     "global_summary": {
       "total_issues": 12,
-      "high_priority": 3,
-      "medium_priority": 6,
-      "low_priority": 3
+      "high": 3,
+      "medium": 6,
+      "low": 3
     },
-    "results": {
-      "https://example.com": {
-        "status": "success",
-        "chunks_analyzed": 2,
-        "summary": "...",
+
+    "pages": [
+      {
+        "page": "https://example.com",
+        "summary": "Brief summary of page content",
+        "issue_count": 5,
         "improvements": [
           {
-            "category": "clarity",
-            "priority": "high",
-            "issue": "Vague headline",
-            "evidence": "...",
-            "suggested_change": "...",
-            "reason": "...",
-            "page": "https://example.com"
+            "category": "clarity | grammar | tone | structure | cta | trust",
+            "priority": "high | medium | low",
+            "issue": "Problem description",
+            "evidence": "Exact text snippet",
+            "suggested_change": "Improved version",
+            "reason": "Why this matters"
           }
         ],
+
         "new_content_suggestions": [
           {
-            "missing_content": "FAQ section",
-            "where_to_add": "Homepage",
-            "suggested_version": "...",
-            "reason": "...",
-            "page": "https://example.com"
+            "missing_content": "What is missing",
+            "where_to_add": "Page section",
+            "suggested_version": "Example content",
+            "reason": "Why it improves UX/conversion"
           }
-        ],
-        "text_length": 3200
+        ]
       }
-    }
+    ]
   }
 }
 ```
 
-`"source"` will be `"fresh"` on first call and `"cache"` on repeat calls within the TTL window.
 
 #### Cache behavior
-First request → "source": "fresh"
-Repeated request (within TTL) → "source": "cache"
 
+`"source"` will be `"fresh"` on first call and `"cache"` on repeat calls within the TTL window.
 Cache stored in: `"data/cache.json'`
 
 
