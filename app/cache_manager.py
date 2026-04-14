@@ -37,18 +37,6 @@ def _save_cache(cache_data: dict):
 def get_cached_result(cache_key: str, max_pages: int):
     cache = _load_cache()
 
-    # cleanup expired
-    expired_keys = [
-        k for k, v in cache.items()
-        if time.time() - v["created_at"] > CACHE_TTL
-    ]
-
-    for k in expired_keys:
-        del cache[k]
-
-    if expired_keys:
-        _save_cache(cache)
-
     if cache_key not in cache:
         return None
 
@@ -57,18 +45,28 @@ def get_cached_result(cache_key: str, max_pages: int):
 
     pages = data.get("pages_crawled", [])
 
-    # If cached pages already enough - slice
+    # If cache has enough pages → slice
     if len(pages) >= max_pages:
         sliced = dict(data)
         sliced["pages_crawled"] = pages[:max_pages]
         sliced["page_count"] = max_pages
         return sliced
 
-    return data
+    # ❗ Not enough pages → force re-crawl
+    return None
 
 
 def set_cache(cache_key: str, data: dict):
     cache = _load_cache()
+
+    new_pages = len(data.get("pages_crawled", []))
+
+    if cache_key in cache:
+        existing_pages = len(cache[cache_key]["data"].get("pages_crawled", []))
+
+        # keep the bigger dataset
+        if existing_pages >= new_pages:
+            return
 
     cache[cache_key] = {
         "data": data,

@@ -7,7 +7,6 @@ import hashlib
 
 SKIP_PATTERNS = ["login", "signup", "logout", "privacy", "terms", "cookie", "cart", "checkout"]
 
-
 def normalize_url(url):
     parsed = urlparse(url)
     return parsed._replace(fragment="", query="").geturl().rstrip("/")
@@ -92,63 +91,74 @@ def crawl_website(start_url, max_pages=5, max_depth=1):
 
     print(f"[CRAWL START] {start_url} | max_pages={max_pages} max_depth={max_depth}")
 
-    while queue and len(pages) < max_pages:
-        url, depth = queue.popleft()
+    current_depth = 0
 
-        if url in visited:
-            continue
+    #BFS crawl with depth tracking
+    while queue and current_depth <= max_depth:
+        level_size = len(queue)
 
-        if depth > max_depth:
-            skipped_pages.append({"url": url, "reason": f"exceeded max depth ({max_depth})"})
-            continue
+        for _ in range(level_size):
+            url, depth = queue.popleft()
 
-        visited.add(url)
-        print(f"[CRAWLING] depth={depth} {url}")
+            if url in visited:
+                continue
 
-        text, soup, error = extract_text_from_page(url)
+            visited.add(url)
 
-        if error:
-            print(f"[ERROR] {url}: {error}")
-            skipped_pages.append({"url": url, "reason": error})
-            continue
+            print(f"[CRAWLING] depth={depth} {url}")
 
-        if not text:
-            print(f"[EMPTY] No content extracted: {url}")
-            skipped_pages.append({"url": url, "reason": "no text content extracted"})
-            continue
+            text, soup, error = extract_text_from_page(url)
 
-        if len(text.strip()) < 50:
-            print(f"[THIN] Content too short: {url}")
-            skipped_pages.append({"url": url, "reason": "insufficient content (< 50 chars)"})
-            continue
+            if error:
+                print(f"[ERROR] {url}: {error}")
+                skipped_pages.append({"url": url, "reason": error})
+                continue
 
-        content_hash = hashlib.md5(text.encode()).hexdigest()
+            if not text:
+                print(f"[EMPTY] No content extracted: {url}")
+                skipped_pages.append({"url": url, "reason": "no text content extracted"})
+                continue
 
-        if content_hash in seen_content_hashes:
-            print(f"[DUPLICATE] Skipping duplicate content: {url}")
-            skipped_pages.append({"url": url, "reason": "duplicate content"})
-            continue
+            if len(text.strip()) < 50:
+                print(f"[THIN] Content too short: {url}")
+                skipped_pages.append({"url": url, "reason": "insufficient content (< 50 chars)"})
+                continue
 
-        seen_content_hashes.add(content_hash)
-        sections = extract_sections(soup) if soup else []
+            content_hash = hashlib.md5(text.encode()).hexdigest()
 
-        pages[url] = {
-            "full_text": text,
-            "sections": sections
-        }
+            if content_hash in seen_content_hashes:
+                print(f"[DUPLICATE] Skipping duplicate content: {url}")
+                skipped_pages.append({"url": url, "reason": "duplicate content"})
+                continue
 
-        print(f"[SAVED] {url} | {len(text)} chars | {len(sections)} sections")
+            seen_content_hashes.add(content_hash)
+            sections = extract_sections(soup) if soup else []
 
-        if soup and depth < max_depth:
-            for link in soup.find_all("a", href=True):
-                full_url = normalize_url(urljoin(url, link["href"]))
+            pages[url] = {
+                "full_text": text,
+                "sections": sections
+            }
 
-                if (
-                    is_valid_url(full_url, base_domain)
-                    and full_url not in visited
-                    and not any(x in full_url.lower() for x in SKIP_PATTERNS)
-                ):
-                    queue.append((full_url, depth + 1))
+            print(f"[SAVED] {url} | {len(text)} chars | {len(sections)} sections")
+
+            #stop when max_pages reached
+            if len(pages) >= max_pages:
+                print(f"[CRAWL DONE] {len(pages)} pages collected | {len(skipped_pages)} skipped")
+                return pages, skipped_pages
+
+            #enqueue next level
+            if soup and depth < max_depth:
+                for link in soup.find_all("a", href=True):
+                    full_url = normalize_url(urljoin(url, link["href"]))
+
+                    if (
+                        is_valid_url(full_url, base_domain)
+                        and full_url not in visited
+                        and not any(x in full_url.lower() for x in SKIP_PATTERNS)
+                    ):
+                        queue.append((full_url, depth + 1))
+
+        current_depth += 1
 
     print(f"[CRAWL DONE] {len(pages)} pages collected | {len(skipped_pages)} skipped")
     return pages, skipped_pages
