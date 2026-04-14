@@ -45,14 +45,13 @@ def get_cached_result(cache_key: str, max_pages: int):
 
     pages = data.get("pages_crawled", [])
 
-    # If cache has enough pages → slice
+    # If cache has enough pages - slice
     if len(pages) >= max_pages:
         sliced = dict(data)
         sliced["pages_crawled"] = pages[:max_pages]
         sliced["page_count"] = max_pages
         return sliced
 
-    # ❗ Not enough pages → force re-crawl
     return None
 
 
