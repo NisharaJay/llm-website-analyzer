@@ -2,6 +2,9 @@ import os
 import json
 import time
 import hashlib
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CACHE_FILE = "data/cache.json"
 CACHE_TTL = int(os.getenv("CACHE_TTL", 86400))  # default: 24 hours
@@ -32,16 +35,23 @@ def _save_cache(cache_data: dict):
 
 def get_cached_result(cache_key: str, max_pages: int):
     cache = _load_cache()
+    
+    # Clean up ALL expired entries on every read
+    expired_keys = [
+        k for k, v in cache.items()
+        if time.time() - v["created_at"] > CACHE_TTL
+    ]
+    if expired_keys:
+        for k in expired_keys:
+            del cache[k]
+        _save_cache(cache)
+        print(f"[CACHE CLEANUP] Removed {len(expired_keys)} expired entries")
 
     if cache_key not in cache:
         return None
 
     entry = cache[cache_key]
-    age = time.time() - entry["created_at"]
-
-    if age > CACHE_TTL:
-        return None
-
+    
     cached_page_count = entry["data"].get("page_count", 0)
     if cached_page_count < max_pages:
         print(f"[CACHE MISS] cached {cached_page_count} pages < requested {max_pages}")
