@@ -2,18 +2,16 @@
 
 A backend system that crawls a website, analyzes its text content using an open-source LLM (Gemma via Google AI Studio), and returns structured recommendations for improving the site's content.
 
----
 
 ## Features
 
 - BFS web crawler with configurable depth and page limit
 - LLM-powered content analysis (clarity, grammar, tone, CTAs, structure, trust)
-- Recommendations for both improving existing content and adding missing content
-- Parallel processing — pages and chunks analyzed concurrently
-- File-backed caching — repeat requests return instantly without re-crawling
+- Recommendations for improving existing content and adding missing content
+- Parallel processing using thread pools for page and section-level analysis
+- File-backed caching for faster repeat requests
 - Graceful handling of failed, empty, duplicate, and inaccessible pages
 
----
 
 ## Setup
 
@@ -161,29 +159,35 @@ curl -X POST http://localhost:8000/analyze \
 
 `"source"` will be `"fresh"` on first call and `"cache"` on repeat calls within the TTL window.
 
+#### Cache behavior
+First request → "source": "fresh"
+Repeated request (within TTL) → "source": "cache"
+
+Cache stored in: `"data/cache.json'`
+
+
+
 ### `GET /health`
 
 Returns `{"status": "ok"}`. Useful for checking the server is running.
 
----
+
 
 ## Assumptions
 
-- The target website must be publicly accessible (no authentication required).
-- Pages that render content via JavaScript only (SPAs without SSR) may return thin or empty content, as the crawler does not execute JavaScript.
-- The crawler respects the `max_pages` and `crawl_depth` limits and stays within the same domain as the starting URL.
-- Pages with fewer than 50 characters of extracted text are considered insufficient and skipped.
-- The LLM (Gemma 3 4B Instruct via Google AI Studio) is assumed to be available and within API quota. Chunk-level failures are logged but do not abort the overall analysis.
-- Each page's text is split into 3,000-character chunks, with a maximum of 9,000 characters (3 chunks) analyzed per page to stay within model limits.
-- Cache is stored as a local JSON file (`data/cache.json`). This is suitable for development and single-instance deployments. For production, replace with database-backed cache.
+- Website must be publicly accessible (no login/auth support)
+- JavaScript-rendered pages may return incomplete content (no JS execution)
+- Pages with < 50 characters of extracted text are skipped
+- Each page is split into sections for parallel LLM analysis
+- LLM used: Gemma 3 4B via Google AI Studio
+- Cache is file-based and intended for single-instance development use
 
----
+
 
 ## Known Limitations
 
-- **JavaScript-rendered content**: Pages that rely on client-side JS to render their main content will not be analyzed correctly. Consider adding a Playwright/Selenium-based renderer for such sites.
-- **Rate limiting**: The crawler does not implement rate limiting or `robots.txt` compliance. Aggressive crawling could get your IP blocked by some websites.
-- **LLM accuracy**: Gemma 3 4B is a small model. Recommendations may occasionally be generic or hallucinated. Larger models will yield better results.
-- **Cache is not invalidated automatically** beyond TTL expiry. If the website content changes, you must wait for the TTL to expire or delete `data/cache.json` manually.
-- **No authentication support**: The crawler cannot access pages behind login walls.
-- **Single-instance cache**: The file-based cache is not safe for concurrent multi-process deployments. Use a shared cache backend (e.g. Redis) for production.
+- No JavaScript rendering (no Playwright / Selenium)
+- No robots.txt compliance or rate limiting
+- Small LLM (Gemma 3 4B) may produce generic recommendations
+- File based cache is not suitable for distributed systems
+- No authentication support for protected pages
