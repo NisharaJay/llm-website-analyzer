@@ -53,7 +53,7 @@ def analyze_website(request: AnalyzeRequest):
     url_str = str(request.url)
 
     try:
-        cache_key = generate_cache_key(url_str, request.crawl_depth, request.max_pages)
+        cache_key = generate_cache_key(url_str, request.crawl_depth)
         cached = get_cached_result(cache_key, request.max_pages)
 
         if cached:
