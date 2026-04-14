@@ -38,7 +38,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-GOOGLE_API_KEY=your_google_ai_studio_key_here
+GOOGLE_API_KEY=google_ai_studio_key_here
 CACHE_TTL=86400
 ```
 
@@ -60,7 +60,6 @@ CACHE_TTL=86400
 └── README.md
 ```
 
----
 
 ## Running the application
 
@@ -72,7 +71,6 @@ The API will be available at `http://127.0.0.1:8000`.
 
 Interactive API docs (Swagger UI): `http://127.0.0.1:8000/docs`
 
----
 
 ## API Usage
 
