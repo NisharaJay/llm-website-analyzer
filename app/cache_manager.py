@@ -41,6 +41,12 @@ def get_cached_result(cache_key: str, max_pages: int):
         return None
 
     entry = cache[cache_key]
+    if time.time() - entry["created_at"] > CACHE_TTL:
+        # expired - remove
+        del cache[cache_key]
+        _save_cache(cache)
+        return None
+    
     data = entry["data"]
 
     pages = data.get("pages_crawled", [])
